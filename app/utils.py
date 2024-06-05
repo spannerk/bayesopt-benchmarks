@@ -10,64 +10,13 @@ import string
 from abc import ABC, abstractmethod
 from os.path import join
 
-# WSM Python API imports
-from pythonAPI.api_logging import route_logger, format_logger_message
-from pythonAPI.constants import API_DATA_FOLDER, INPUT_JSON_PREFIX, OUTPUT_PREFIX, POD_SPEC_PREFIX
+
+from constants import API_DATA_FOLDER, INPUT_JSON_PREFIX, OUTPUT_PREFIX, POD_SPEC_PREFIX
 
 class InitScoringException(Exception):
     '''
     Raised when there is an issue with the initialisation of the async-score endpoint
     '''
-
-class ReportingLayer(ABC):
-    '''
-    A parent class for all classes that have a reporting functionality back to some observer.
-    '''
-
-    _observers = []
-
-    def attach(self, observers):
-        '''
-        Attach observer instances that need to be updated with any changes as a result
-        of business logic run by this class.
-        '''
-
-        if not isinstance(observers, list):
-            observers = [observers]
-
-        # check observable attributes have been defined on this class
-        for observer in observers:
-            if not set(vars(observer)) & (set(vars(self))):
-                raise RuntimeError(
-                    "Can't attach observer - attaching class is missing required attributes.")
-
-        self._observers.extend(observers)
-
-    def set_watched_attributes_and_update_observers(self, **kwargs):
-        '''
-        Set the watched attribute to a new value and call update method
-        on each of the attached observers with the reporting classes' instance.
-        '''
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        for observer in self._observers:
-            observer.update(self)
-
-class WatchingLayer(ABC):
-    '''
-    A parent class for all classes that expect updates from ReportingLayers.
-    '''
-
-    @abstractmethod
-    def update(self, subject):
-        '''
-        Receive updated response from subjects. This method will be different in each
-        specific subclass - an update to status will have different logic compared to
-        an updated to response.
-        '''
-        pass # pylint: disable=W0107
 
 def delete_file(filename, log_call_uuid=None):
     '''
@@ -87,15 +36,15 @@ def delete_file(filename, log_call_uuid=None):
     '''
 
     message = f"Attempting to remove {filename}"
-    route_logger.info(format_logger_message(message, log_call_uuid))
+
 
     try:
         os.remove(filename)
         message = f"Removed {filename}"
-        route_logger.info(format_logger_message(message, log_call_uuid))
+
     except FileNotFoundError:
         message = f"{filename} not found. Nothing to remove."
-        route_logger.info(format_logger_message(message, log_call_uuid))
+
 
 def write_to_file(input_data, filename, log_call_uuid=None):
     '''
@@ -116,15 +65,15 @@ def write_to_file(input_data, filename, log_call_uuid=None):
     None
     '''
 
-    message = f"Attempting to write {filename}"
-    route_logger.info(format_logger_message(message, log_call_uuid))
+    # message = f"Attempting to write {filename}"
+    # try:
+    #     with open(filename, "w", encoding="utf-8") as f:
+    #         f.write(input_data)
+    # except:
+    #     message = f"Could not write to {filename}."
 
-    try:
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(input_data)
-    except: # pylint: disable=W0702
-        message = f"Could not write to {filename}."
-        route_logger.info(format_logger_message(message, log_call_uuid))
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(input_data)
 
 def generate_uuid():
     '''
@@ -140,7 +89,6 @@ def generate_uuid():
     UUID string to allow us to include the UUID in the response JSON.
     '''
 
-    route_logger.info("Called generate uuid")
     formatted_time = time.strftime("%Y-%m-%d-%H-%M-%S" , time.gmtime())
     run_id = "wsm-" + formatted_time + "-" + "".join(random.choices(string.ascii_lowercase, k=5))
 

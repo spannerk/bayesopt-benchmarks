@@ -1,17 +1,18 @@
 import os
-
+import time
 from typing import Union
 
 from fastapi import BackgroundTasks, FastAPI, Request, status, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
+from pydantic import BaseModel
 
-app = FastAPI()
-
-from app.utils import generate_uuid, delete_file, get_model_artefact_filepath
-
-from app.constants import (
+from utils import generate_uuid, delete_file, get_model_artefact_filepath, write_to_file
+from constants import (
     KUBECTL_PATH, OUTPUT_PREFIX, POD_NAME_PREFIX, API_DATA_FOLDER,
     DEFAULT_MODEL_RUN_ID, )
+
+
+app = FastAPI()
 
 @app.get("/")
 async def read_root():
@@ -26,14 +27,24 @@ def liveness():
     '''
     return "API is live"
 
+app = FastAPI()
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+
 @app.post("/async-score")
-async def async_score(request: Request):
+async def async_score(item: Item, background_tasks: BackgroundTasks):
     call_uuid = generate_uuid()
+    background_tasks.add_task(process_function, call_uuid, item)
     response =  JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
                 "call_uuid"   : call_uuid,
-                "call_status" : "not implemented"
+                "call_status" : "task initialized"
                 }
     )
 
@@ -41,12 +52,27 @@ async def async_score(request: Request):
 
 @app.get("/get-status")
 async def get_status(call_uuid):
+
+    model_input_filepath    = get_model_artefact_filepath(call_uuid, "model_input")
+    model_output_filepath   = get_model_artefact_filepath(call_uuid, "model_output")
+    folder = os.path.join(API_DATA_FOLDER, call_uuid)
+
+    input_exists = os.path.exists(model_input_filepath)
+    output_exists = os.path.exists(model_output_filepath)
+    folder_exists = os.path.exists(folder)
+
+    if input_exists and output_exists:
+        status_val = 'Succeeded'
+    elif input_exists:
+        status_val = 'Running'
+    elif not folder_exists:
+        status_val = 'Not Found'
+    else:
+        status_val = 'Unknown'
+
     response = PlainTextResponse(
         status_code=status.HTTP_200_OK,
-        content={
-            "call_uuid": call_uuid,
-            "call_status": "not implemented"
-        }
+        content=status_val
     )
     return response
 
@@ -68,3 +94,21 @@ async def get_model_output(call_uuid, background_tasks: BackgroundTasks, delete_
         background_tasks.add_task(delete_file, model_output_filepath, call_uuid)
 
     return FileResponse(model_output_filepath)
+
+async def process_function(call_uuid, item):
+
+    results_path = os.path.join(API_DATA_FOLDER, call_uuid, "results")
+    inputs_path = os.path.join(API_DATA_FOLDER, call_uuid, "inputs")
+    os.makedirs(results_path)
+    os.makedirs(inputs_path)
+
+
+    model_input_filepath    = get_model_artefact_filepath(call_uuid, "model_input")
+    model_output_filepath   = get_model_artefact_filepath(call_uuid, "model_output")
+
+    write_to_file(item.model_dump_json(), model_input_filepath)
+
+    # do some longish process
+    time.sleep(30)
+
+    write_to_file(item.model_dump_json(), model_output_filepath)
