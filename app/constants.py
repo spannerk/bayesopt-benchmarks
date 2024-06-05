@@ -1,0 +1,7 @@
+KUBECTL_PATH = "/usr/local/bin/kubectl"
+POD_NAME_PREFIX = "modeller-pod-"
+POD_SPEC_PREFIX = "pod-spec-"
+INPUT_JSON_PREFIX = "json-"
+OUTPUT_PREFIX = "result-"
+API_DATA_FOLDER = "results/api_data"
+DEFAULT_MODEL_RUN_ID = "none"
