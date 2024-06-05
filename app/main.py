@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 import pandas as pd
 
-from functions import Hartmann6, Hartmann6Inputs, AugHartmann6, AugHartmann6Inputs
+from functions import Hartmann6, Hartmann6Inputs, AugHartmann6, AugHartmann6Inputs, Colville, ColvilleInputs
 from utils import generate_uuid, delete_file, get_model_artefact_filepath, write_to_file
 from constants import API_DATA_FOLDER
 
@@ -45,9 +45,25 @@ async def async_score_hartmann6(inputs: Hartmann6Inputs, background_tasks: Backg
     return response
 
 @app.post("/aughartmann6/async-score")
-async def async_score_hartmann6(inputs: AugHartmann6Inputs, background_tasks: BackgroundTasks):
+async def async_score_aughartmann6(inputs: AugHartmann6Inputs, background_tasks: BackgroundTasks):
     
     model = AugHartmann6()
+
+    call_uuid = generate_uuid(model.function_name)
+    background_tasks.add_task(process_function, call_uuid, inputs, model)
+    response =  JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+                "call_uuid"   : call_uuid,
+                "call_status" : "task started"
+                }
+    )
+    return response
+
+@app.post("/colville/async-score")
+async def async_score_colville(inputs: ColvilleInputs, background_tasks: BackgroundTasks):
+    
+    model = Colville()
 
     call_uuid = generate_uuid(model.function_name)
     background_tasks.add_task(process_function, call_uuid, inputs, model)
