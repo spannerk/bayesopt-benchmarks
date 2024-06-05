@@ -75,7 +75,7 @@ def write_to_file(input_data, filename, log_call_uuid=None):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(input_data)
 
-def generate_uuid():
+def generate_uuid(function_name=None):
     '''
     Generate a UUID based on random digits (instead of the hardware address), 
     plus the current time. 
@@ -88,9 +88,12 @@ def generate_uuid():
     ------
     UUID string to allow us to include the UUID in the response JSON.
     '''
-
+    if function_name:
+        funcstr = function_name + "-"
+    else:
+        funcstr = ""
     formatted_time = time.strftime("%Y-%m-%d-%H-%M-%S" , time.gmtime())
-    run_id = "wsm-" + formatted_time + "-" + "".join(random.choices(string.ascii_lowercase, k=5))
+    run_id = "wsm-" + funcstr + formatted_time + "-" + "".join(random.choices(string.ascii_lowercase, k=5))
 
     return run_id
 
